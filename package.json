@@ -1,0 +1,12 @@
+{
+    "name": "brokerserver",
+    "version": "0.0.1",
+    "private": true,
+    "author": "Anderson Zanichellli",
+    "dependencies": {
+        "jade": "~1.9.2",
+        "jasmine": "~2.2.1",
+        "restify": "~3.0.1",
+        "mongodb": "~2.0"
+    }
+}
