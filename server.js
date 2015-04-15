@@ -22,6 +22,12 @@ brokerserver.consulta = function(collections, res) {
     });
 };
 
+server.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
+
 server.get('/types', brokerserver.types);
 
 server.listen(9000, function() {
