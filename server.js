@@ -7,6 +7,7 @@ var uri = 'mongodb://broker:BrokerServer2015@ds063180.mongolab.com:63180/brokers
 var brokerserver = {};
 
 brokerserver.types = function(req, res, next){
+    console.error('Client connected at ' + new Date());
     brokerserver.consulta('types', res);
     next();
 };
