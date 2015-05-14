@@ -43,5 +43,5 @@ server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
 
 server.listen(port, function() {
-  console.log('%s listening at port %s', 'BrokerServer', port);
+  console.log('%s listening at server port %s', 'BrokerServer', port);
 });
