@@ -55,9 +55,16 @@ brokerserver.signup = function(req, res, next) {
 
 brokerserver.insert = function(params){
     var collection = params.db.collection(params.collection);
-    collection.insert(params.user);
-
-    params.response.json({"_id": 1});
+    if(params.docs.length > 0) {
+        params.response.json({"insert": false, "err": "Error, email used."});
+        return;
+    }
+    try {
+        collection.insert(params.user);
+        params.response.json({"insert": true});
+    } catch(ex) {
+        params.response.json({"insert": false, "err": "Error on trying to save the user."});
+    }
 };
 
 brokerserver.find = function(params) {
