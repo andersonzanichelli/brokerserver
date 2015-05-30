@@ -27,18 +27,26 @@ brokerserver.email = function(req, res, next) {
         "response": res,
         "callback": undefined
     };
+
     brokerserver.dbOperations(params);
     next();
 };
 
 brokerserver.signup = function(req, res, next) {
+    var user = {
+        "name": req.params['name'],
+        "email": req.params['email'],
+        "password": req.params['password']
+    };
+
     var params = {
         "operation": brokerserver.find,
         "collection": 'users',
         "filter": {email: req.params['email']},
         "response": res,
         "callback": brokerserver.insert,
-        "request": req
+        "request": req,
+        "user": user
     };
 
     brokerserver.dbOperations(params);
@@ -46,9 +54,8 @@ brokerserver.signup = function(req, res, next) {
 };
 
 brokerserver.insert = function(params){
-    console.log(params.request);
-    var document = params.db.collection.insert(params.request.params);
-    console.log(document);
+    var collection = params.db.collection(params.collection);
+    collection.insert(params.user);
 
     params.response.json({"_id": 1});
 };
@@ -86,7 +93,7 @@ server.use(function(req, res, next) {
 
 server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
-server.post('/signup', brokerserver.signup);
+server.get('/signup/:name/:email/:password', brokerserver.signup);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
