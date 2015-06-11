@@ -67,7 +67,40 @@ brokerserver.insert = function(params){
     }
 };
 
+brokerserver.login = function(req, res, next) {
+    var user = {
+        "email": req.params['email'],
+        "password": req.params['password']
+    };
+
+    console.log('User trying login...');
+
+    var params = {
+        "operation": brokerserver.find,
+        "collection": 'users',
+        "filter": user,
+        "response": res,
+        "callback": brokerserver.logged,
+        "request": req
+    };
+
+    brokerserver.dbOperations(params);
+    next();
+};
+
+brokerserver.logged = function(params) {
+    console.log('Going to answer...');
+    if(params.docs.length > 0) {
+        console.log('User logged!');
+        params.response.json({"logged": true});
+        return;
+    }
+
+    params.response.json({"logged": false});
+};
+
 brokerserver.find = function(params) {
+    console.log('Searching something...');
     var collection = params.db.collection(params.collection);
     collection.find(params.filter).toArray(function(err, docs) {
         if(err) {
@@ -77,6 +110,7 @@ brokerserver.find = function(params) {
 
         if(params.callback){
             params.docs = docs;
+            console.log('Yes, I have found!');
             params.callback(params);
         } else
             params.response.json(docs);
@@ -101,6 +135,7 @@ server.use(function(req, res, next) {
 server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
+server.get('/login/:email/:password', brokerserver.login);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
