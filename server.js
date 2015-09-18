@@ -44,7 +44,7 @@ brokerserver.signup = function(req, res, next) {
         "collection": 'users',
         "filter": {email: req.params['email']},
         "response": res,
-        "callback": brokerserver.insert,
+        "callback": brokerserver.saveuser,
         "request": req,
         "user": user
     };
@@ -53,7 +53,7 @@ brokerserver.signup = function(req, res, next) {
     next();
 };
 
-brokerserver.insert = function(params){
+brokerserver.saveuser = function(params){
     var collection = params.db.collection(params.collection);
     if(params.docs.length > 0) {
         params.response.json({"insert": false, "err": "Error, email used."});
@@ -117,6 +117,41 @@ brokerserver.find = function(params) {
     });
 };
 
+brokerserver.beforeSavePreferences = function(req, res, next){
+    //var config = {
+    //    "name": req.params['name'],
+    //    "email": req.params['email'],
+    //    "password": req.params['password']
+    //};
+
+    console.log("req");
+    console.log(req);
+    console.log("resp");
+    console.log(res);
+
+    var params = {
+        "operation": brokerserver.saveConfig,
+        "collection": 'configuration',
+        "response": res,
+        "request": req,
+        "config": {}
+    };
+
+  //  brokerserver.dbOperations(params);
+    next();
+};
+
+brokerserver.savePreferences = function(){
+    var collection = params.db.collection(params.collection);
+
+    try {
+        collection.insert(params.config);
+        params.response.json({"insert": true});
+    } catch(ex) {
+        params.response.json({"insert": false, "err": "Error on trying to save the configuration."});
+    }
+};
+
 brokerserver.dbOperations = function(params) {
     mongodb.MongoClient.connect(uri, function(err, db) {
         if(err) throw err;
@@ -136,6 +171,7 @@ server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
 server.get('/login/:email/:password', brokerserver.login);
+server.get('/savePreferences', brokerserver.beforeSavePreferences);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
