@@ -2,8 +2,11 @@ var restify = require('restify');
 var mongodb = require('mongodb');
 
 var server = restify.createServer();
-var uri = 'mongodb://broker:BrokerServer2015@ds063180.mongolab.com:63180/brokerserver';
+//var uri = 'mongodb://broker:BrokerServer2015@ds063180.mongolab.com:63180/brokerserver';
+var uri = 'mongodb://brokerserver:BrokerServer2015@ds051873.mongolab.com:51873/broker'
 var port = process.env.PORT || 9000;
+
+server.use(restify.bodyParser({ mapParams: true }));
 
 var brokerserver = {};
 
@@ -118,30 +121,21 @@ brokerserver.find = function(params) {
 };
 
 brokerserver.beforeSavePreferences = function(req, res, next){
-    //var config = {
-    //    "name": req.params['name'],
-    //    "email": req.params['email'],
-    //    "password": req.params['password']
-    //};
-
-    console.log("req");
-    console.log(req);
-    console.log("resp");
-    console.log(res);
+    var prefs = brokerserver.prefsBuilder(req._url.query);
 
     var params = {
-        "operation": brokerserver.saveConfig,
+        "operation": brokerserver.savePreferences,
         "collection": 'configuration',
         "response": res,
         "request": req,
-        "config": {}
+        "config": JSON.parse(prefs)
     };
 
-  //  brokerserver.dbOperations(params);
+    brokerserver.dbOperations(params);
     next();
 };
 
-brokerserver.savePreferences = function(){
+brokerserver.savePreferences = function(params){
     var collection = params.db.collection(params.collection);
 
     try {
@@ -159,6 +153,30 @@ brokerserver.dbOperations = function(params) {
         params.db = db;
         params.operation(params);
     });
+};
+
+brokerserver.prefsBuilder = function(query) {
+
+    var valueType = function(value) {
+        if(isNaN(value * 1) && typeof value === 'string')
+            return value;
+
+        return value * 1;
+    }
+
+    var array = query.split('&');
+    var obj = {}
+
+    for (var i in array) {
+        var attr = array[i].split('=');
+
+        var key = attr[0];
+        var value = unescape(attr[1]);
+
+        obj[key] = valueType(value);
+    }
+
+    return JSON.stringify(obj);
 };
 
 server.use(function(req, res, next) {
