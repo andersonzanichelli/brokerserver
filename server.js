@@ -105,18 +105,22 @@ brokerserver.logged = function(params) {
 brokerserver.find = function(params) {
     console.log('Searching something...');
     var collection = params.db.collection(params.collection);
+    console.log('collection...');
     collection.find(params.filter).toArray(function(err, docs) {
         if(err) {
+            console.log('Error...');
             params.response.json(err);
             return;
         }
 
         if(params.callback){
             params.docs = docs;
-            console.log('Yes, I have found!');
+            console.log('calling callback');
             params.callback(params);
-        } else
+        } else {
+            console.log('Yes, I have found!');
             params.response.json(docs);
+        }
     });
 };
 
@@ -144,6 +148,23 @@ brokerserver.savePreferences = function(params){
     } catch(ex) {
         params.response.json({"insert": false, "err": "Error on trying to save the configuration."});
     }
+};
+
+brokerserver.myServices = function(req, res, next){
+    var filter = {
+        "user": req.params['user']
+    };
+
+    var params = {
+        "operation": brokerserver.find,
+        "collection": 'configuration',
+        "filter": filter,
+        "response": res,
+        "request": req
+    };
+
+    brokerserver.dbOperations(params);
+    next();
 };
 
 brokerserver.dbOperations = function(params) {
@@ -190,6 +211,7 @@ server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
 server.get('/login/:email/:password', brokerserver.login);
 server.get('/savePreferences', brokerserver.beforeSavePreferences);
+server.get('/myServices/:user', brokerserver.myServices);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
