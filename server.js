@@ -71,12 +71,12 @@ brokerserver.saveuser = function(params){
 };
 
 brokerserver.login = function(req, res, next) {
-    var user = {
-        "email": req.params['email'],
-        "password": req.params['password']
-    };
+    var j = JSON.parse(req.body);
 
-    console.log('User trying login...');
+    var user = {
+        "email": j.email,
+        "password": j.password
+    };
 
     var params = {
         "operation": brokerserver.find,
@@ -209,7 +209,7 @@ server.use(function(req, res, next) {
 server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
-server.get('/login/:email/:password', brokerserver.login);
+server.post('/login/', brokerserver.login);
 server.get('/savePreferences', brokerserver.beforeSavePreferences);
 server.get('/myServices/:user', brokerserver.myServices);
 
