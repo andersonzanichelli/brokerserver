@@ -167,6 +167,40 @@ brokerserver.myServices = function(req, res, next){
     next();
 };
 
+brokerserver.saveLink = function(req, res, next) {
+    var j = JSON.parse(req.body);
+
+    var config = {
+        "url": j.url,
+        "email": j.email,
+        "service": j.service
+    };
+
+    var params = {
+        "operation": brokerserver.find,
+        "collection": 'link',
+        "filter": {"email": j.email, "service": j.service},
+        "response": res,
+        "callback": brokerserver.persistLink,
+        "request": req,
+        "config": config
+    };
+
+    brokerserver.dbOperations(params);
+    next();
+};
+
+brokerserver.persistLink = function(params) {
+    var collection = params.db.collection(params.collection);
+
+    if(params.docs.length > 0) {
+        collection.update({"email": params.config.email, "service": params.config.service},
+            { $push: { url: params.config.url }});
+    } else {
+        collection.insert({"email": params.config.email, "service": params.config.service, url: [params.config.url]});
+    }
+};
+
 brokerserver.dbOperations = function(params) {
     mongodb.MongoClient.connect(uri, function(err, db) {
         if(err) throw err;
@@ -209,9 +243,10 @@ server.use(function(req, res, next) {
 server.get('/types', brokerserver.types);
 server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
-server.post('/login/', brokerserver.login);
+server.post('/login', brokerserver.login);
 server.get('/savePreferences', brokerserver.beforeSavePreferences);
 server.get('/myServices/:user', brokerserver.myServices);
+server.post('/saveLink', brokerserver.saveLink);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
