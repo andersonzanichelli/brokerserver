@@ -119,6 +119,7 @@ brokerserver.find = function(params) {
             params.callback(params);
         } else {
             console.log('Yes, I have found!');
+            console.log(docs);
             params.response.json(docs);
         }
     });
@@ -152,12 +153,12 @@ brokerserver.savePreferences = function(params){
 
 brokerserver.myServices = function(req, res, next){
     var filter = {
-        "user": req.params['user']
+        "email": req.body.email
     };
 
     var params = {
         "operation": brokerserver.find,
-        "collection": 'configuration',
+        "collection": 'link',
         "filter": filter,
         "response": res,
         "request": req
@@ -245,7 +246,7 @@ server.get('/email/:email', brokerserver.email);
 server.get('/signup/:name/:email/:password', brokerserver.signup);
 server.post('/login', brokerserver.login);
 server.get('/savePreferences', brokerserver.beforeSavePreferences);
-server.get('/myServices/:user', brokerserver.myServices);
+server.post('/myServices', brokerserver.myServices);
 server.post('/saveLink', brokerserver.saveLink);
 
 server.listen(port, function() {
