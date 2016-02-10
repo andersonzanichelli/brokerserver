@@ -1,5 +1,6 @@
 var restify = require('restify');
 var mongodb = require('mongodb');
+var request = require('request');
 
 var server = restify.createServer();
 //var uri = 'mongodb://broker:BrokerServer2015@ds063180.mongolab.com:63180/brokerserver';
@@ -105,7 +106,7 @@ brokerserver.logged = function(params) {
 brokerserver.find = function(params) {
     console.log('Searching something...');
     var collection = params.db.collection(params.collection);
-    console.log('collection...');
+    console.log('collection ' + params.collection);
     collection.find(params.filter).toArray(function(err, docs) {
         if(err) {
             console.log('Error...');
@@ -119,7 +120,7 @@ brokerserver.find = function(params) {
             params.callback(params);
         } else {
             console.log('Yes, I have found!');
-            console.log(docs);
+            //console.log(docs);
             params.response.json(docs);
         }
     });
@@ -152,9 +153,12 @@ brokerserver.savePreferences = function(params){
 };
 
 brokerserver.myServices = function(req, res, next){
+
     var filter = {
         "email": req.body.email
     };
+
+    console.log(filter);
 
     var params = {
         "operation": brokerserver.find,
@@ -199,6 +203,59 @@ brokerserver.persistLink = function(params) {
             { $push: { url: params.config.url }});
     } else {
         collection.insert({"email": params.config.email, "service": params.config.service, url: [params.config.url]});
+    }
+};
+
+brokerserver.showService = function(req, res, next) {
+    var j = JSON.parse(req.body);
+
+    var params = {
+        "operation": brokerserver.find,
+        "collection": 'configuration',
+        "filter": {"email": j.email, "service": j.service},
+        "response": res,
+        "callback": brokerserver.choosingService,
+        "request": req,
+        "config": {"urls": j.url, "email": j.email, "service": j.service}
+    };
+
+    brokerserver.dbOperations(params);
+    next();
+};
+
+brokerserver.choosingService = function(params) {
+
+    if(params.docs.length > 0) {
+        var urls = params.config.urls;
+        var email = params.config.email;
+        var service = params.config.service;
+        var password = params.docs[0].password;
+
+        var callback = function(body){
+            console.log(body);
+        }
+
+        var headers = {
+            'Content-Type': 'application/form-data'
+        };
+
+        
+        for(var i = 0; i < urls.length; i++) {
+            var options = {
+                headers: headers,
+                form: {
+                    "email": email,
+                    "password": password
+                }
+            };
+
+            request.post(urls[i], options, function (error, response, body) {
+                if (!error && response.statusCode == 200)
+                    callback(body);
+                else
+                    console.log([response.statusCode]);
+            });
+        }
     }
 };
 
@@ -248,6 +305,7 @@ server.post('/login', brokerserver.login);
 server.get('/savePreferences', brokerserver.beforeSavePreferences);
 server.post('/myServices', brokerserver.myServices);
 server.post('/saveLink', brokerserver.saveLink);
+server.post('/showService', brokerserver.showService);
 
 server.listen(port, function() {
   console.log('%s listening at server port %s', 'BrokerServer', port);
