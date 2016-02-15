@@ -199,16 +199,21 @@ brokerserver.saveLink = function(req, res, next) {
 brokerserver.persistLink = function(params) {
     var collection = params.db.collection(params.collection);
 
-    if(params.docs.length > 0) {
-        collection.update({"email": params.config.email, "service": params.config.service},
-            { $push: { url: params.config.url }});
-    } else {
-        collection.insert({
-            "email": params.config.email,
-            "password": params.config.password,
-            "service": params.config.service,
-            url: [params.config.url]
-        });
+    try {
+        if(params.docs.length > 0) {
+            collection.update({"email": params.config.email, "service": params.config.service},
+                { $push: { url: params.config.url }});
+        } else {
+            collection.insert({
+                "email": params.config.email,
+                "password": params.config.password,
+                "service": params.config.service,
+                url: [params.config.url]
+            });
+        }
+        params.response.json({"success": true});
+    } catch(ex) {
+        throw ex;
     }
 };
 
