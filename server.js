@@ -120,7 +120,7 @@ brokerserver.find = function(params) {
             params.callback(params);
         } else {
             console.log('Yes, I have found!');
-            //console.log(docs);
+            console.log(docs);
             params.response.json(docs);
         }
     });
@@ -178,6 +178,7 @@ brokerserver.saveLink = function(req, res, next) {
     var config = {
         "url": j.url,
         "email": j.email,
+        "password": j.password,
         "service": j.service
     };
 
@@ -202,7 +203,12 @@ brokerserver.persistLink = function(params) {
         collection.update({"email": params.config.email, "service": params.config.service},
             { $push: { url: params.config.url }});
     } else {
-        collection.insert({"email": params.config.email, "service": params.config.service, url: [params.config.url]});
+        collection.insert({
+            "email": params.config.email,
+            "password": params.config.password,
+            "service": params.config.service,
+            url: [params.config.url]
+        });
     }
 };
 
@@ -214,7 +220,7 @@ brokerserver.showService = function(req, res, next) {
         "collection": 'configuration',
         "filter": {"email": j.email, "service": j.service},
         "response": res,
-        "callback": brokerserver.choosingService,
+        //"callback": brokerserver.choosingService,
         "request": req,
         "config": {"urls": j.url, "email": j.email, "service": j.service}
     };
@@ -230,9 +236,19 @@ brokerserver.choosingService = function(params) {
         var email = params.config.email;
         var service = params.config.service;
         var password = params.docs[0].password;
+        var city = params.docs[0].city;
+        var result = [];
+
+        console.log(params.docs[0]);
 
         var callback = function(body){
-            console.log(body);
+            var info = JSON.parse(body).filter(function(entry) {
+                console.log(entry);
+                return entry.city === city;
+            });
+
+            result.push(info);
+            console.log(result);
         }
 
         var headers = {
