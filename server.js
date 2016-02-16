@@ -93,9 +93,9 @@ brokerserver.login = function(req, res, next) {
 };
 
 brokerserver.logged = function(params) {
-    console.log('Going to answer...');
+    //console.log('Going to answer...');
     if(params.docs.length > 0) {
-        console.log('User logged!');
+        //console.log('User logged!');
         params.response.json({"logged": true});
         return;
     }
@@ -104,23 +104,24 @@ brokerserver.logged = function(params) {
 };
 
 brokerserver.find = function(params) {
-    console.log('Searching something...');
+    //console.log('Searching something...');
     var collection = params.db.collection(params.collection);
-    console.log('collection ' + params.collection);
+    //console.log('collection ' + params.collection);
     collection.find(params.filter).toArray(function(err, docs) {
         if(err) {
-            console.log('Error...');
+            //console.log('Error...');
             params.response.json(err);
             return;
         }
 
         if(params.callback){
             params.docs = docs;
-            console.log('calling callback');
+            //console.log('calling callback');
+            //console.log(params.docs);
             params.callback(params);
         } else {
-            console.log('Yes, I have found!');
-            console.log(docs);
+            //console.log('Yes, I have found!');
+            //console.log(docs);
             params.response.json(docs);
         }
     });
@@ -158,7 +159,7 @@ brokerserver.myServices = function(req, res, next){
         "email": req.body.email
     };
 
-    console.log(filter);
+    //console.log(filter);
 
     var params = {
         "operation": brokerserver.find,
@@ -213,54 +214,66 @@ brokerserver.persistLink = function(params) {
         }
         params.response.json({"success": true});
     } catch(ex) {
-        throw ex;
+        params.response.json({"success": false, "err": "Error on trying to save the link."});
     }
 };
 
 brokerserver.showService = function(req, res, next) {
     var j = JSON.parse(req.body);
 
+    //console.log(j);
+
     var params = {
         "operation": brokerserver.find,
-        "collection": 'configuration',
+        "collection": 'link',
         "filter": {"email": j.email, "service": j.service},
         "response": res,
-        //"callback": brokerserver.choosingService,
+        "callback": brokerserver.findConfig,
         "request": req,
-        "config": {"urls": j.url, "email": j.email, "service": j.service}
+        "config": {"email": j.email, "service": j.service},
     };
 
     brokerserver.dbOperations(params);
     next();
 };
 
+brokerserver.findConfig = function(params) {
+    params.urls = params.docs[0].url;
+    params.password = params.docs[0].password;
+    params.email = params.config.email;
+    params.service = params.config.service;
+    params.collection = 'configuration';
+    params.callback = brokerserver.choosingService;
+
+    brokerserver.dbOperations(params);
+}
+
 brokerserver.choosingService = function(params) {
 
+    //console.log(params.docs);
     if(params.docs.length > 0) {
-        var urls = params.config.urls;
-        var email = params.config.email;
-        var service = params.config.service;
-        var password = params.docs[0].password;
+        var urls = params.urls;
+        var email = params.email;
+        var service = params.service;
+        var password = params.password;
         var city = params.docs[0].city;
+        var lastUpdate = params.docs[0].last === 'on';
         var result = [];
 
-        console.log(params.docs[0]);
+        //console.log([urls, email, service, password, city, lastUpdate]);
 
         var callback = function(body){
             var info = JSON.parse(body).filter(function(entry) {
-                console.log(entry);
                 return entry.city === city;
             });
 
-            result.push(info);
-            console.log(result);
-        }
+            result = result.concat(info);
+        };
 
         var headers = {
             'Content-Type': 'application/form-data'
         };
 
-        
         for(var i = 0; i < urls.length; i++) {
             var options = {
                 headers: headers,
@@ -273,8 +286,30 @@ brokerserver.choosingService = function(params) {
             request.post(urls[i], options, function (error, response, body) {
                 if (!error && response.statusCode == 200)
                     callback(body);
+                    if(lastUpdate) {
+                        var ord = result.sort(function(a, b){
+                            return Date.parse(a.update) - Date.parse(b.update);
+                        });
+
+                        var chosenone = ord[ord.length - 1];
+                        var data = new Date(chosenone.update);
+
+                        var updated = data.getDate() + "/" + data.getMonth() + 1 + "/" + data.getFullYear() + " " + (data.getHours() < 10 ? "0"+data.getHours() : data.getHours()) + ":" + (data.getMinutes() < 10 ? "0"+data.getMinutes(): data.getMinutes()) + ":" + (data.getSeconds() < 10 ? "0"+data.getSeconds() : data.getSeconds());
+
+                        var html =  '<div class="weather">'
+                                   +'   <div class="weather-images '+ chosenone.sky +'"></div>'
+                                   +'   <element class="temperature">'+ chosenone.temperature +'°C</element>'
+                                   +'   <div class="weather-images weather-termo '+ chosenone.termo +'"></div>'
+                                   +'   <br/><br/><br/>'
+                                   +'   Humidity: '+ chosenone.humidity +'%<br/>'
+                                   +'   Wind: '+ chosenone.wind +'km/h<br/>'
+                                   +'   Precipitation: '+ chosenone.preciptation +'%<br/><br/>'
+                                   +'   Last Update: ' + updated
+                                   +'</div>';
+                        params.response.end(html);
+                    }
                 else
-                    console.log([response.statusCode]);
+                    params.response.json({"result": "error", "status": response.statusCode});
             });
         }
     }
