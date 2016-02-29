@@ -95,12 +95,12 @@ brokerserver.login = function(req, res, next) {
 brokerserver.logged = function(params) {
     //console.log('Going to answer...');
     if(params.docs.length > 0) {
-        console.log('User logged!');
+        //console.log('User logged!');
         params.response.json({"logged": true});
         return;
     }
 
-    console.log('User not logged!');
+    //console.log('User not logged!');
     params.response.json({"logged": false});
 };
 
@@ -129,6 +129,9 @@ brokerserver.find = function(params) {
 };
 
 brokerserver.beforeSavePreferences = function(req, res, next){
+
+   // console.log(req);
+   // console.log(req._url.query);
     var prefs = brokerserver.prefsBuilder(req._url.query);
 
     var params = {
@@ -165,7 +168,7 @@ brokerserver.myServices = function(req, res, next){
 
     var params = {
         "operation": brokerserver.find,
-        "collection": 'link',
+        "collection": 'configuration',
         "filter": filter,
         "response": res,
         "request": req
@@ -228,13 +231,12 @@ brokerserver.persistLink = function(params) {
 
 brokerserver.showService = function(req, res, next) {
     var j = JSON.parse(req.body);
-
     //console.log(j);
 
     var params = {
         "operation": brokerserver.find,
         "collection": 'link',
-        "filter": {"user": j.email, "service": j.service},
+        "filter": {"email": j.email, "service": j.service},
         "response": res,
         "callback": brokerserver.findConfig,
         "request": req,
@@ -252,6 +254,10 @@ brokerserver.findConfig = function(params) {
     params.service = params.config.service;
     params.collection = 'configuration';
     params.callback = brokerserver.choosingService;
+    params.operation = brokerserver.find;
+    params.filter = {"user": params.docs[0].user, "service": params.config.service}
+
+//console.log(params);
 
     brokerserver.dbOperations(params);
 }
@@ -269,6 +275,7 @@ brokerserver.choosingService = function(params) {
         var result = [];
 
         //console.log([urls, email, service, password, city, lastUpdate]);
+       // console.log("escolhendo");
 
         var callback = function(body){
             var info = JSON.parse(body).filter(function(entry) {
@@ -280,22 +287,24 @@ brokerserver.choosingService = function(params) {
 
         var escreve = function(chosenone) {
             var updated = function(update) {
+                //console.log("updated!");
                 var data = new Date(update);
                 return data.getDate() + "/" + data.getMonth() + 1 + "/" + data.getFullYear() + " " + (data.getHours() < 10 ? "0"+data.getHours() : data.getHours()) + ":" + (data.getMinutes() < 10 ? "0"+data.getMinutes(): data.getMinutes()) + ":" + (data.getSeconds() < 10 ? "0"+data.getSeconds() : data.getSeconds());
             }
-
-            return '<div class="weather">'
-                   +'   <div class="weather-images '+ chosenone.sky +'"></div>'
-                   +'   <element class="temperature">'+ chosenone.temperature +'°C</element>'
-                   +'   <div class="weather-images weather-termo '+ chosenone.termo +'"></div>'
-                   +'   <br/><br/><br/>'
-                   +'   City: '+ chosenone.city +'<br/>'
-                   +'   Humidity: '+ chosenone.humidity +'%<br/>'
-                   +'   Wind: '+ chosenone.wind +'km/h<br/>'
-                   +'   Precipitation: '+ chosenone.preciptation +'%<br/><br/>'
-                   +'   Last Update: ' + updated(chosenone.update)
-                   +'</div>';
-        }
+            var html = '<div class="weather">'
+                       +'   <div class="weather-images '+ chosenone.sky +'"></div>'
+                       +'   <element class="temperature">'+ chosenone.temperature +'°C</element>'
+                       +'   <div class="weather-images weather-termo '+ chosenone.termo +'"></div>'
+                       +'   <br/><br/><br/>'
+                       +'   City: '+ chosenone.city +'<br/>'
+                       +'   Humidity: '+ chosenone.humidity +'%<br/>'
+                       +'   Wind: '+ chosenone.wind +'km/h<br/>'
+                       +'   Precipitation: '+ chosenone.preciptation +'%<br/><br/>'
+                       +'   Last Update: ' + updated(chosenone.update)
+                       +'</div>';
+            //console.log(html);
+            return html;
+        };
 
         var headers = {
             'Content-Type': 'application/form-data'
@@ -345,6 +354,7 @@ brokerserver.dbOperations = function(params) {
 
 brokerserver.prefsBuilder = function(query) {
 
+console.log(query);
     var valueType = function(value) {
         if(isNaN(value * 1) && typeof value === 'string')
             return value;
