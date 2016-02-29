@@ -95,11 +95,12 @@ brokerserver.login = function(req, res, next) {
 brokerserver.logged = function(params) {
     //console.log('Going to answer...');
     if(params.docs.length > 0) {
-        //console.log('User logged!');
+        console.log('User logged!');
         params.response.json({"logged": true});
         return;
     }
 
+    console.log('User not logged!');
     params.response.json({"logged": false});
 };
 
@@ -146,6 +147,7 @@ brokerserver.savePreferences = function(params){
     var collection = params.db.collection(params.collection);
 
     try {
+        //console.log(params.config);
         collection.insert(params.config);
         params.response.json({"insert": true});
     } catch(ex) {
@@ -156,7 +158,7 @@ brokerserver.savePreferences = function(params){
 brokerserver.myServices = function(req, res, next){
 
     var filter = {
-        "email": req.body.email
+        "user": req.body.user
     };
 
     //console.log(filter);
@@ -176,17 +178,20 @@ brokerserver.myServices = function(req, res, next){
 brokerserver.saveLink = function(req, res, next) {
     var j = JSON.parse(req.body);
 
+    //console.log(j);
+
     var config = {
         "url": j.url,
         "email": j.email,
         "password": j.password,
-        "service": j.service
+        "service": j.service,
+        "user": j.user
     };
 
     var params = {
         "operation": brokerserver.find,
         "collection": 'link',
-        "filter": {"email": j.email, "service": j.service},
+        "filter": {"user": j.user, "service": j.service},
         "response": res,
         "callback": brokerserver.persistLink,
         "request": req,
@@ -200,15 +205,18 @@ brokerserver.saveLink = function(req, res, next) {
 brokerserver.persistLink = function(params) {
     var collection = params.db.collection(params.collection);
 
+    //console.log(params.config);
+
     try {
         if(params.docs.length > 0) {
-            collection.update({"email": params.config.email, "service": params.config.service},
+            collection.update({"user": params.config.user, "service": params.config.service},
                 { $push: { url: params.config.url }});
         } else {
             collection.insert({
                 "email": params.config.email,
                 "password": params.config.password,
                 "service": params.config.service,
+                "user": params.config.user,
                 url: [params.config.url]
             });
         }
@@ -226,7 +234,7 @@ brokerserver.showService = function(req, res, next) {
     var params = {
         "operation": brokerserver.find,
         "collection": 'link',
-        "filter": {"email": j.email, "service": j.service},
+        "filter": {"user": j.email, "service": j.service},
         "response": res,
         "callback": brokerserver.findConfig,
         "request": req,
@@ -270,6 +278,25 @@ brokerserver.choosingService = function(params) {
             result = result.concat(info);
         };
 
+        var escreve = function(chosenone) {
+            var updated = function(update) {
+                var data = new Date(update);
+                return data.getDate() + "/" + data.getMonth() + 1 + "/" + data.getFullYear() + " " + (data.getHours() < 10 ? "0"+data.getHours() : data.getHours()) + ":" + (data.getMinutes() < 10 ? "0"+data.getMinutes(): data.getMinutes()) + ":" + (data.getSeconds() < 10 ? "0"+data.getSeconds() : data.getSeconds());
+            }
+
+            return '<div class="weather">'
+                   +'   <div class="weather-images '+ chosenone.sky +'"></div>'
+                   +'   <element class="temperature">'+ chosenone.temperature +'°C</element>'
+                   +'   <div class="weather-images weather-termo '+ chosenone.termo +'"></div>'
+                   +'   <br/><br/><br/>'
+                   +'   City: '+ chosenone.city +'<br/>'
+                   +'   Humidity: '+ chosenone.humidity +'%<br/>'
+                   +'   Wind: '+ chosenone.wind +'km/h<br/>'
+                   +'   Precipitation: '+ chosenone.preciptation +'%<br/><br/>'
+                   +'   Last Update: ' + updated(chosenone.update)
+                   +'</div>';
+        }
+
         var headers = {
             'Content-Type': 'application/form-data'
         };
@@ -284,7 +311,7 @@ brokerserver.choosingService = function(params) {
             };
 
             request.post(urls[i], options, function (error, response, body) {
-                if (!error && response.statusCode == 200)
+                if (!error && response.statusCode == 200){
                     callback(body);
                     if(lastUpdate) {
                         var ord = result.sort(function(a, b){
@@ -292,24 +319,16 @@ brokerserver.choosingService = function(params) {
                         });
 
                         var chosenone = ord[ord.length - 1];
-                        var data = new Date(chosenone.update);
 
-                        var updated = data.getDate() + "/" + data.getMonth() + 1 + "/" + data.getFullYear() + " " + (data.getHours() < 10 ? "0"+data.getHours() : data.getHours()) + ":" + (data.getMinutes() < 10 ? "0"+data.getMinutes(): data.getMinutes()) + ":" + (data.getSeconds() < 10 ? "0"+data.getSeconds() : data.getSeconds());
-
-                        var html =  '<div class="weather">'
-                                   +'   <div class="weather-images '+ chosenone.sky +'"></div>'
-                                   +'   <element class="temperature">'+ chosenone.temperature +'°C</element>'
-                                   +'   <div class="weather-images weather-termo '+ chosenone.termo +'"></div>'
-                                   +'   <br/><br/><br/>'
-                                   +'   Humidity: '+ chosenone.humidity +'%<br/>'
-                                   +'   Wind: '+ chosenone.wind +'km/h<br/>'
-                                   +'   Precipitation: '+ chosenone.preciptation +'%<br/><br/>'
-                                   +'   Last Update: ' + updated
-                                   +'</div>';
+                        var html = escreve(chosenone);
+                        params.response.end(html);
+                    } else {
+                        var html = escreve(result[0]);
                         params.response.end(html);
                     }
-                else
+                } else {
                     params.response.json({"result": "error", "status": response.statusCode});
+                }
             });
         }
     }
