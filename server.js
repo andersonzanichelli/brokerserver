@@ -130,8 +130,8 @@ brokerserver.find = function(params) {
 
 brokerserver.beforeSavePreferences = function(req, res, next){
 
-   // console.log(req);
-   // console.log(req._url.query);
+    console.log(req);
+    console.log(req._url.query);
     var prefs = brokerserver.prefsBuilder(req._url.query);
 
     var params = {
